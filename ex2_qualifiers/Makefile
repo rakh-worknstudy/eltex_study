@@ -1,0 +1,11 @@
+SRCS = main.c extern.c
+PROG = test
+all:	assembler build run clean
+build:
+	gcc -o $(PROG) $(SRCS)
+assembler:
+#	gcc -S $(SRCS)
+run:
+	./$(PROG)
+clean:
+	rm $(PROG)
