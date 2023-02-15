@@ -2,33 +2,44 @@
 #include <stdio.h>
 #include <malloc.h>
 
-char *eltex_string_get(void) {
-  char *string = (char *)malloc(ELTEX_STRING_CHUNK_LENGTH * sizeof(char));
-  if (string) {
-    char *string_pos = string;
-    unsigned char chunk_free = 0;
+char *eltex_string_get(char **string) {
+  if (string == NULL)
+    return NULL;
+  *string = (char *)malloc(ELTEX_STRING_CHUNK_LENGTH * sizeof(char));
+  if (*string) {
+    unsigned int length;
+    char *string_pos = *string;
+    unsigned char chunk_free = ELTEX_STRING_CHUNK_LENGTH;
     while (1) {
-      char buffer = getchar();
-      if (buffer == '\n' || buffer == '\0') {
-        if (string_pos == string) {
-          free(string);
-          string = NULL;
-        }
-        break;
-      }
       if (!chunk_free) {
-        string = (char *)realloc(string, ((string_pos - string) + ELTEX_STRING_CHUNK_LENGTH) * sizeof(char));
-        if (!string) {
+        *string = (char *)realloc(*string, (length + ELTEX_STRING_CHUNK_LENGTH) * sizeof(char));
+        if (!*string) {
           printf("ERROR: Realloc failed\n");
           break;
         }
-        chunk_free = 8;
+        chunk_free = ELTEX_STRING_CHUNK_LENGTH;
+      }
+      char buffer = getchar();
+      if (buffer == '\n' || buffer == '\0') {
+        *string_pos = '\0';
+        if (string_pos == *string)
+          *string = eltex_string_free(string);
+        break;
       }
       *(string_pos++) = buffer;
       --chunk_free;
+      ++length;
     }
   } else {
     printf("ERROR: Malloc failed\n");
   }
-  return string;
+  return *string;
+}
+
+char *eltex_string_free(char **string) {
+  if (string != NULL) {
+    free(*string);
+    string = NULL;
+  }
+  return NULL;
 }
