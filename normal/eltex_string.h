@@ -1,7 +1,7 @@
 #ifndef ELTEX_STRING_H_
 #define ELTEX_STRING_H_
 
-#define ELTEX_STRING_CHUNK_LENGTH 64
+#define ELTEX_STRING_CHUNK_LENGTH 32
 
 char *eltex_string_get(char **string);
 char *eltex_string_free(char **string);

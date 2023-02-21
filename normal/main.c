@@ -5,6 +5,10 @@
 
 #define _ELTEX_DEBUG
 
+# ifndef _ELTEX_DEBUG
+int eltex_calc_menu(void);
+# endif /* _ELTEX_DEBUG */
+
 int main(void) {
 # ifdef _ELTEX_DEBUG
   char *string;
@@ -29,8 +33,14 @@ int main(void) {
   printf("%s", " DONE\nFREEING STRING:");
   eltex_string_free(&string);
   printf("%s", " DONE\n");
-# elif
-  
-# endif
   return 0;
+# elif
+  return eltex_calc_menu();
+# endif /* _ELTEX_DEBUG */
 }
+
+# ifndef _ELTEX_DEBUG
+int eltex_calc_menu(void) {
+  
+}
+# endif /* _ELTEX_DEBUG */

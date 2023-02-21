@@ -14,7 +14,9 @@ char *eltex_string_get(char **string) {
       if (!chunk_free) {
         *string = (char *)realloc(*string, (length + ELTEX_STRING_CHUNK_LENGTH) * sizeof(char));
         if (!*string) {
+#         ifdef _ELTEX_DEBUG
           printf("ERROR: Realloc failed\n");
+#         endif /* _ELTEX_DEBUG */
           break;
         }
         chunk_free = ELTEX_STRING_CHUNK_LENGTH;
@@ -31,7 +33,9 @@ char *eltex_string_get(char **string) {
       ++length;
     }
   } else {
+#   ifdef _ELTEX_DEBUG
     printf("ERROR: Malloc failed\n");
+#   endif /* _ELTEX_DEBUG */
   }
   return *string;
 }
