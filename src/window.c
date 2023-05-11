@@ -1,31 +1,22 @@
 #include "window.h"
 #include <ncurses.h>
 #include <malloc.h>
+#include <stdio.h>
+#include <time.h>
 
 //	================================================================
 //	                            DIRENT
 //	================================================================
-#include <dirent.h>
 /* DIRENT INIT */
 void dirent_init(void) {
 	/* LEFT */
 	path_left[0] = '/';
 	path_left[1] = 0;
-	dir_left = opendir(path_left);
-	list_left = (struct dirent_list *)malloc(sizeof(struct dirent_list));
-	list_left->here = telldir(dir_left);
-	list_left->prev = NULL;
-	list_left->next = NULL;
-	closedir(dir_left);
+	dirlist_left = dirlist_make(path_left);
 	/* RIGHT */
 	path_right[0] = '/';
 	path_right[1] = 0;
-	dir_right = opendir(path_right);
-	list_right = (struct dirent_list *)malloc(sizeof(struct dirent_list));
-	list_right->here = telldir(dir_right);
-	list_right->prev = NULL;
-	list_right->next = NULL;
-	closedir(dir_right);
+	dirlist_right = dirlist_make(path_right);
 }
 /* DIRENT MOVE UP */
 void dirent_out(void) {
@@ -34,21 +25,33 @@ void dirent_out(void) {
 	switch (window_side) {
 	case 0:
 		/* LEFT */
-		for (iter = 0; path_left[iter]; ++iter) {
-			if (path_left[iter] == '/')
-				delim_last = iter;
-		}
-		if (delim_last)
-			path_left[delim_last + 1] = 0;
+		for (iter = 0; path_left[iter]; ++iter);
+		if (iter <= 2)
+			return;
+		for (iter -= 2; path_left[iter] != '/'; --iter);
+		path_left[iter + 1] = 0;
+		dirlist_free(dirlist_left);
+		dirlist_left = dirlist_make(path_left);
+		page_fill(pageinfo_left, page_size,  dirlist_left);
+		page_left_size = page_fill_last;
+		pos_left = 0;
+		pos_left_long = 0;
+		need_redraw = 1;
 		return;
 	case 1:
 		/* RIGHT */
-		for (iter = 0; path_right[iter]; ++iter) {
-			if (path_right[iter] == '/')
-				delim_last = iter;
-		}
-		if (delim_last)
-			path_right[delim_last + 1] = 0;
+		for (iter = 0; path_right[iter]; ++iter);
+		if (iter <= 2)
+			return;
+		for (iter -= 2; path_right[iter] != '/'; --iter);
+		path_right[iter + 1] = 0;
+		dirlist_free(dirlist_right);
+		dirlist_right = dirlist_make(path_right);
+		page_fill(pageinfo_right, page_size, dirlist_right);
+		page_right_size = page_fill_last;
+		pos_right = 0;
+		pos_right_long = 0;
+		need_redraw = 1;
 		return;
 	default:
 		return;
@@ -59,142 +62,61 @@ void dirent_in(void) {
 	short iter, pos_iter;
 	switch (window_side) {
 	case 0:
-		/* LEFT */
-		for (iter = 0; path_left[iter]; ++iter)
-			continue;
-		dir_left = opendir(path_left);
-		seekdir(dir_left, list_left->here);
-		for (pos_iter = 0; pos_iter < pos_left % page_size; ++pos_iter)
-			dirent_left = readdir(dir_left);
-		path_left[iter++] = 0;
-		for (pos_iter = 0; dirent_left->d_name[pos_iter]; ++pos_iter)
-			path_left[iter++] = dirent_left->d_name[pos_iter];
-		path_left[iter] = 0;
-		closedir(dir_left);
+		if (pageinfo_left[pos_left].type == -1)
+			return;
+		if (pageinfo_left[pos_left].name[0] == '.' && pageinfo_left[pos_left].name[1] == '.') {
+			dirent_out();
+			return;
+		}
+		if (pageinfo_left[pos_left].type == DT_DIR) {
+			/* LEFT */
+			for (iter = 0; path_left[iter]; ++iter)
+				continue;
+			//	path_left[iter++] = '/';
+			for (pos_iter = 0; pageinfo_left[pos_left].name[pos_iter]; ++pos_iter)
+				path_left[iter + pos_iter] = pageinfo_left[pos_left].name[pos_iter];
+			path_left[iter + pos_iter++] = '/';
+			path_left[iter + pos_iter] = 0;
+			dirlist_free(dirlist_left);
+			dirlist_left = dirlist_make(path_left);
+			page_fill(pageinfo_left, page_size,  dirlist_left);
+			page_left_size = page_fill_last;
+			need_redraw = 1;
+			pos_left = 0;
+			pos_left_long = 0;
+		}
 		return;
 	case 1:
 		/* RIGHT */
-		for (iter = 0; path_right[iter]; ++iter)
-			continue;
-		dir_right = opendir(path_left);
-		seekdir(dir_right, list_left->here);
-		for (pos_iter = 0; pos_iter < pos_left % page_size; ++pos_iter)
-			dirent_right = readdir(dir_right);
-		path_right[iter++] = 0;
-		for (pos_iter = 0; dirent_right->d_name[pos_iter]; ++pos_iter)
-			path_right[iter++] = dirent_right->d_name[pos_iter];
-		path_right[iter] = 0;
-		closedir(dir_right);
+		if (pageinfo_right[pos_right].type == -1)
+			return;
+		if (pageinfo_right[pos_right].name[0] == '.' && pageinfo_right[pos_right].name[1] == '.') {
+			dirent_out();
+			return;
+		}
+		if (pageinfo_right[pos_right].type == DT_DIR) {
+			/* LEFT */
+			for (iter = 0; path_right[iter]; ++iter)
+				continue;
+			//	path_left[iter++] = '/';
+			for (pos_iter = 0; pageinfo_right[pos_right].name[pos_iter]; ++pos_iter)
+				path_right[iter + pos_iter] = pageinfo_right[pos_right].name[pos_iter];
+			path_right[iter + pos_iter++] = '/';
+			path_right[iter + pos_iter] = 0;
+			dirlist_free(dirlist_right);
+			dirlist_right = dirlist_make(path_right);
+			page_fill(pageinfo_right, page_size, dirlist_right);
+			page_right_size = page_fill_last;
+			need_redraw = 1;
+			pos_right = 0;
+			pos_right_long = 0;
+		}
 		return;
 	default:
 		return;
 	}	
 }
-/* DIRENT INCREMENT */
-void list_next(void) {
-	switch (window_side) {
-	case 0:
-		if (list_left->next == NULL)
-			list_add();
-		else
-			list_left = list_left->next;
-		return;
-	case 1:
-		if (list_right->next == NULL)
-			list_add();
-		else
-			list_right = list_right->next;
-		return;
-	default:
-		return;
-	}
-}
-/* FREE LIST EXCEPT HEAD */
-void list_free(void) {
-	struct dirent_list *list_save;
-	switch (window_side) {
-	case 0:
-		/* LEFT */
-		for (; list_left->prev != NULL; list_left = list_left->prev)
-			continue;
-		for (; list_left->next != NULL; list_left = list_left->next) {
-			list_save = list_left->next->next;
-			free(list_left->next);
-			list_left->next = list_save;
-		}
-		return;
-	case 1:
-		/* RIGHT */
-		for (; list_right->prev != NULL; list_right = list_right->prev)
-			continue;
-		for (; list_right->next != NULL; list_right = list_right->next) {
-			list_save = list_right->next->next;
-			free(list_right->next);
-			list_right->next = list_save;
-		}
-		return;
-	default:
-		return;
-	}
-}
-/* OPEN NEW LIST */
-void list_open(void) {
-	list_free();
-	switch (window_side) {
-	case 0:
-		/* LEFT */
-		dir_left = opendir(path_left);
-		list_left->here = telldir(dir_left);
-		list_left->next = NULL;
-		closedir(dir_left);
-		return;
-	case 1:
-		/* RIGHT */
-		dir_right = opendir(path_right);
-		list_right->here = telldir(dir_right);
-		list_right->next = NULL;
-		closedir(dir_right);
-		return;
-	default:
-		return;
-	}
-}
-/* ADD TO LIST AT POSITION */
-void list_add(void) {
-	//struct dirent_list *list_new;
-	switch (window_side) {
-	case 0:
-		/* LEFT */
-		dir_left = opendir(path_left);
-		seekdir(dir_left, list_left->here);
-		for (short iter = 0; iter < LINES - 9; ++iter)
-			readdir(dir_left);
-		list_new = (struct dirent_list *)malloc(sizeof(struct dirent_list));
-		list_new->here = telldir(dir_left);
-		list_new->prev = list_left;
-		list_new->next = NULL;
-		list_left->next = list_new;
-		list_left = list_left->next;
-		closedir(dir_left);
-		return;
-	case 1:
-		/* RIGHT */
-		dir_right = opendir(path_right);
-		seekdir(dir_right, list_right->here);
-		for (short iter = 0; iter < LINES - 9; ++iter)
-			readdir(dir_right);
-		list_new = (struct dirent_list *)malloc(sizeof(struct dirent_list));
-		list_new->prev = list_right;
-		list_right->next = list_new;
-		list_right = list_right->next;
-		list_right->here = telldir(dir_right);
-		list_right->next = NULL;
-		closedir(dir_right);
-		return;
-	default:
-		return;
-	}
-}
+
 
 //	================================================================
 //	                            LENGTH
@@ -394,7 +316,7 @@ void draw_main(void) {
 	for (y = 2; y < LINES - 3; ++y) {
 		for (x = 0; x < COLS; ++x) {
 			/* LEFT BORDER */
-			if (x == 0 || x == COLS/2) {
+			if (x == 0 ||x == COLS/2) {
 				draw_border_left();
 				continue;
 			}
@@ -406,6 +328,14 @@ void draw_main(void) {
 			/* CENTRAL & BOTTOM BORDERS */
 			if (y == LINES - 6 || y == LINES - 4) {
 				mvaddch(y, x, ACS_HLINE);
+				continue;
+			}
+			if (x == length_name + 1 || x == length_name + length_size + 2) {
+				draw_border_left();
+				continue;
+			}
+			if (x == COLS/2 + length_name + 1 || x == COLS/2 + length_name + length_size + 2) {
+				draw_border_right();
 				continue;
 			}
 		}
@@ -441,199 +371,168 @@ void draw_border_right(void) {
 	}
 	mvaddch(y, x, ACS_VLINE);	
 }
-
-
-
-void draw_name_left(void) {
-	if (dirent_left->d_type == DT_DIR) {
-		attron(A_BOLD);
-		mvaddch(y, 1, '/');
-	} else {
-		mvaddch(y, 1, '.');
-	}
+void draw_dirent_name_left(char iter) {
 	for (x = 2; x < length_name + 1; ++x) {
-		if (dirent_left->d_name[x - 2])
-			mvaddch(y, x, dirent_left->d_name[x - 2]);
+		if (pageinfo_left[iter].name[x - 2])
+			mvaddch(3 + iter, x, pageinfo_left[iter].name[x - 2]);
 		else
 			break;
-	}
-	if (dirent_left->d_type == DT_DIR) {
-		attroff(A_BOLD);
 	}
 	for (; x < length_name + 1; ++x)
-		mvaddch(y, x, ' ');
-	mvaddch(y, x, ACS_VLINE);
-}
-void draw_size_left(void) {
-//	unsigned short temp = dirent_left->d_reclen;
-//	char reclen[7], iter;
-//	for (iter = 6; iter >= 0; --iter) {
-//		reclen[iter] = temp % 10 + '0';
-//		temp /= 10;
-//	}
-//	++iter;
-	for (x = length_name + 2; x < length_name + length_size + 2; ++x) {
-//		mvaddch(y, x, reclen[iter++]);
-//		if (iter == 7)
-			break;
-	}
-	for (; x < length_name + length_size + 2; ++x)
-		mvaddch(y, x, ' ');
-	mvaddch(y, x, ACS_VLINE);	
-}
-void draw_time_left(void) {
-	for (x = length_name + length_size + 3; x < length_name + length_size + length_edit + 3; ++x) {
-		mvaddch(y, x, ' ');
-	}
-}
-void draw_space_left(void) {
-	for (x = 1; x < COLS/2 - 1; ++x) {
-		if (x == length_name + 1 || x == length_name + length_size + 2) {
-			mvaddch(y, x, ACS_VLINE);
-			continue;
+		mvaddch(3 + iter, x, ' ');
+	if (iter == pos_left) {
+		attroff(COLOR_PAIR(2));
+		attron(COLOR_PAIR(1));
+		if (pageinfo_left[iter].type == DT_DIR)
+			mvaddch(4 + page_size, 1, '/');
+		else
+			mvaddch(4 + page_size, 1, '.');
+		for (x = 2; x < COLS/2 - 1; ++x) {
+			if (pageinfo_left[iter].name[x - 2])
+				mvaddch(4 + page_size, x, pageinfo_left[iter].name[x - 2]);
+			else
+				break;
 		}
-		mvaddch(y, x, ' ');
+		for (; x < COLS/2 - 1; ++x)
+			mvaddch(4 + page_size, x, ' ');
+		attroff(COLOR_PAIR(1));
+		attron(COLOR_PAIR(2));
+	}
+}
+void draw_dirent_size_left(char iter) {
+	char reclen[16];
+	char len = sprintf(reclen, "%-lu", pageinfo_left[iter].size);
+	char moretempgarbage;
+	for (moretempgarbage = 0; len < length_size; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, moretempgarbage + length_name + 2, ' ');
+	for (len = 0; moretempgarbage < length_size; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, moretempgarbage + length_name + 2, reclen[len]);
+}
+void draw_dirent_time_left(char iter) {
+	char reclen[32];
+	char len = sprintf(reclen, "%-32s", ctime(&pageinfo_left[iter].time)) - 4;
+	char moretempgarbage;
+	for (moretempgarbage = 0; len < length_edit; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, moretempgarbage + length_name + length_size + 3, ' ');
+	for (len = 0; moretempgarbage < length_edit; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, moretempgarbage + length_name + length_size + 3, reclen[len + 4]);
+}
+
+void draw_dirent_left(char iter) {
+	if (pageinfo_left[iter].type == -1) {
+		for (x = 1; x < COLS/2 - 1; ++x) {
+			if (x == length_name + 1 || x == length_name + length_size + 2)
+				continue;
+			mvaddch(3 + iter, x, ' ');
+		}
+		mvaddch(3 + iter, x, ACS_VLINE);
+	} else {
+		if (iter == pos_left) {
+			attroff(COLOR_PAIR(1));
+			attron(COLOR_PAIR(2));
+		}
+		if (pageinfo_left[iter].type == DT_DIR) {
+			attron(A_BOLD);
+			mvaddch(3 + iter, 1, '/');
+		} else {
+			mvaddch(3 + iter, 1, '.');
+		}
+		draw_dirent_name_left(iter);
+		draw_dirent_size_left(iter);
+		draw_dirent_time_left(iter);
+		if (iter == pos_left) {
+			attroff(COLOR_PAIR(2));
+			attron(COLOR_PAIR(1));
+		}
+		if (pageinfo_left[iter].type == DT_DIR)
+			attroff(A_BOLD);
 	}
 }
 
-void draw_name_right(void) {
-	if (dirent_left->d_type == DT_DIR) {
-		attron(A_BOLD);
-		mvaddch(y, COLS/2 + 1, '/');
-	} else {
-		mvaddch(y, COLS/2 + 1, '.');
-	}
-	for (x = COLS/2 + 2; x < length_name + COLS/2 + 1; ++x) {
-		if (dirent_right->d_name[x - COLS/2 - 2])
-			mvaddch(y, x, dirent_right->d_name[x - COLS/2 - 2]);
+void draw_dirent_name_right(char iter) {
+	for (x = COLS/2 + 2; x < COLS/2 + length_name + 1; ++x) {
+		if (pageinfo_right[iter].name[x - 2 - COLS/2])
+			mvaddch(3 + iter, x, pageinfo_right[iter].name[x - 2 - COLS/2]);
 		else
 			break;
 	}
-	if (dirent_left->d_type == DT_DIR) {
-		attroff(A_BOLD);
-	}
-	for (; x < length_name + COLS/2 + 1; ++x)
-		mvaddch(y, x, ' ');
-	mvaddch(y, x, ACS_VLINE);
-}
-void draw_size_right(void) {
-//	unsigned short temp = dirent_right->d_reclen;
-//	char reclen[20], iter;
-//	for (iter = 6; iter >= 0; --iter) {
-//		reclen[iter] = temp % 10 + '0';
-//		temp /= 10;		
-//	}
-//	++iter;
-	for (x = length_name + COLS/2 + 2; x < length_name + length_size + COLS/2 + 2; ++x) {
-//		mvaddch(y, x, reclen[iter++]);
-//		if (iter == 7)
-			break;
-	}
-	for (; x < length_name + length_size + COLS/2 + 2; ++x)
-		mvaddch(y, x, ' ');
-	mvaddch(y, x, ACS_VLINE);	
-}
-void draw_time_right(void) {
-	for (x = length_name + length_size + COLS/2 + 3; x < COLS - 1; ++x) {
-		mvaddch(y, x, ' ');
-	}	
-}
-void draw_space_right(void) {
-	for (x = COLS/2 + 1; x < COLS - 1; ++x) {
-		if (x == length_name + COLS/2 + 1 || x == length_name + length_size + COLS/2 + 2) {
-			mvaddch(y, x, ACS_VLINE);
-			continue;
+	for (; x < COLS/2 + length_name + 1; ++x)
+		mvaddch(3 + iter, x, ' ');
+	if (iter == pos_right) {
+		attroff(COLOR_PAIR(2));
+		attron(COLOR_PAIR(1));
+		if (pageinfo_right[iter].type == DT_DIR)
+			mvaddch(4 + page_size, COLS/2 + 1, '/');
+		else
+			mvaddch(4 + page_size, COLS/2 + 1, '.');
+		for (x = COLS/2 + 2; x < COLS - 1; ++x) {
+			if (pageinfo_right[iter].name[x - 2 - COLS/2])
+				mvaddch(4 + page_size, x, pageinfo_right[iter].name[x - 2 - COLS/2]);
+			else
+				break;
 		}
-		mvaddch(y, x, ' ');
+		for (; x < COLS - 1; ++x)
+			mvaddch(4 + page_size, x, ' ');
+		attroff(COLOR_PAIR(1));
+		attron(COLOR_PAIR(2));
 	}
+}
+void draw_dirent_size_right(char iter) {
+	char reclen[16];
+	char len = sprintf(reclen, "%-lu", pageinfo_right[iter].size);
+	char moretempgarbage;
+	for (moretempgarbage = 0; len < length_size; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, COLS/2 + moretempgarbage + length_name + 2, ' ');
+	for (len = 0; moretempgarbage < length_size; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, COLS/2 + moretempgarbage + length_name + 2, reclen[len]);
+}
+void draw_dirent_time_right(char iter) {
+	char reclen[32];
+	char len = sprintf(reclen, "%-32s", ctime(&pageinfo_right[iter].time)) - 4;
+	char moretempgarbage;
+	for (moretempgarbage = 0; len < length_edit; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, COLS/2 + moretempgarbage + length_name + length_size + 3, ' ');
+	for (len = 0; moretempgarbage < length_edit; ++moretempgarbage, ++len)
+		mvaddch(3 + iter, COLS/2 + moretempgarbage + length_name + length_size + 3, reclen[len + 4]);
+}
+
+void draw_dirent_right(char iter) {
+	if (pageinfo_right[iter].type == -1) {
+		for (x = COLS/2 + 1; x < COLS - 1; ++x) {
+			if (x == COLS/2 + length_name + 1 || x == COLS/2 + length_name + length_size + 2)
+				continue;
+			mvaddch(3 + iter, x, ' ');
+		}
+		mvaddch(3 + iter, x, ACS_VLINE);
+	} else {
+		if (iter == pos_right) {
+			attroff(COLOR_PAIR(1));
+			attron(COLOR_PAIR(2));
+		}
+		if (pageinfo_right[iter].type == DT_DIR) {
+			attron(A_BOLD);
+			mvaddch(3 + iter, COLS/2 + 1, '/');
+		} else {
+			mvaddch(3 + iter, COLS/2 + 1, '.');
+		}
+		draw_dirent_name_right(iter);
+		draw_dirent_size_right(iter);
+		draw_dirent_time_right(iter);
+		if (iter == pos_right) {
+			attroff(COLOR_PAIR(2));
+			attron(COLOR_PAIR(1));
+		}
+		if (pageinfo_right[iter].type == DT_DIR)
+			attroff(A_BOLD);
+	}	
 }
 
 void draw_dirent(void) {
-	/* LEFT */
-	dir_left = opendir(path_left);
-	seekdir(dir_left, list_left->here);
-	for (y = 3; y < LINES - 6; ++y) {
-		if ((dirent_left = readdir(dir_left))) {
-			if (y == pos_left % (LINES - 9) + 3) {
-				attroff(COLOR_PAIR(1));
-				attron(COLOR_PAIR(2));
-			}
-			draw_name_left();
-			draw_size_left();
-			draw_time_left();
-			if (y == pos_left % (LINES - 9) + 3) {
-				attroff(COLOR_PAIR(2));
-				attron(COLOR_PAIR(1));
-				for (x = 1; x < COLS/2 - 1; ++x) {
-					if (dirent_left->d_name[x - 1])
-						mvaddch(LINES - 5, x, dirent_left->d_name[x - 1]);
-					else
-						break;
-				}
-				for (; x < COLS/2 - 1; ++x)
-					mvaddch(LINES - 5, x, ' ');
-			}
-		} else {
-			break;
-		}
+	for (char iter = 0; iter < page_size; ++iter) {
+		draw_dirent_left(iter);
+		draw_dirent_right(iter);
 	}
-	for (; y < LINES - 6; ++y) {
-		if (y == pos_left % (LINES - 9) + 3) {
-			attroff(COLOR_PAIR(1));
-			attron(COLOR_PAIR(2));
-			--pos_left;
-			--y;
-			draw_name_left();
-			draw_size_left();
-			draw_time_left();
-			attroff(COLOR_PAIR(2));
-			attron(COLOR_PAIR(1));
-		} else {
-			draw_space_left();
-		}
-	}
-	closedir(dir_left);
-	/* RIGHT */
-	dir_right = opendir(path_right);
-	seekdir(dir_right, list_right->here);
-	for (y = 3; y < LINES - 6; ++y) {
-		if ((dirent_right = readdir(dir_right))) {
-			if (y == pos_right % (LINES - 9) + 3)
-				attron(COLOR_PAIR(2));
-			draw_name_right();
-			draw_size_right();
-			draw_time_right();
-			if (y == pos_right % (LINES - 9) + 3) {
-				attron(COLOR_PAIR(1));
-				for (x = COLS/2 + 1; x < COLS - 1; ++x) {
-					if (dirent_right->d_name[x - COLS/2 -1])
-						mvaddch(LINES - 5, x, dirent_right->d_name[x - COLS/2 - 1]);
-					else
-						break;
-				}
-				for (; x < COLS - 1; ++x)
-					mvaddch(LINES - 5, x, ' ');
-			}
-		} else {
-			break;
-		}
-	}
-	for (; y < LINES - 6; ++y) {
-		if (y == pos_left % (LINES - 9) + 3) {
-			attroff(COLOR_PAIR(1));
-			attron(COLOR_PAIR(2));
-			--pos_right;
-			--y;
-			draw_name_right();
-			draw_size_right();
-			draw_time_right();
-			attroff(COLOR_PAIR(2));
-			attron(COLOR_PAIR(1));
-		} else {
-			draw_space_right();
-		}
-	}
-	closedir(dir_right);
+	
 }
 //	================================================================
 void draw_console(void) {
@@ -645,7 +544,7 @@ void draw_console(void) {
 	attron(COLOR_PAIR(1));
 }
 void draw_line_bottom(void) {
-	const char str_help[] = "  W/S - MOVE UP/DOWN | ENTER - JUMP IN | TAB - SWITCH SIDE | CONSOLE - OFF  ";
+	const char str_help[] = "  W/S - MOVE UP/DOWN | D - JUMP IN | TAB - SWITCH SIDE | CONSOLE - OFF | X - SAFE EXIT (NO CTRL+C CATCH YET)  ";
 	attron(COLOR_PAIR(2));
 	for (x = 0; x < COLS; ++x) {
 		if (str_help[x])
@@ -663,13 +562,89 @@ void draw_line_bottom(void) {
 //	                            WINDOW
 //	================================================================
 void window_init(void) {
+	cols_old = 0;
+	lines_old = 0;
 	dirent_init();
-	page_size = LINES - 8;
-	page_left_step = 0;
-	page_right_step = 0;
-	pos_left_step = 0;
-	pos_right_step = 0;
+	page_size = LINES - 9;
+	pageinfo_left  = page_make(page_size);
+	pageinfo_right = page_make(page_size);
+	page_fill(pageinfo_left,  page_size, dirlist_left);
+	page_left_size = page_fill_last;
+	page_fill(pageinfo_right, page_size, dirlist_right);
+	page_right_size = page_fill_last;
+	need_redraw = 0;
 }
+
+
+void pos_left_up(void) {
+	if (pos_left) {
+		--pos_left;
+		--pos_left_long;
+		need_redraw = 1;
+		return;
+	}
+	if (pos_left_long) {
+		if (pos_left_long > page_size)
+			pos_left_long -= page_size;
+		else
+			pos_left_long = page_size - 1;
+		pos_left = page_size - 1;
+		dirlist_left = dirlist_stepback(dirlist_left, page_size + page_left_size);
+		pageinfo_left = page_fill(pageinfo_left, page_size, dirlist_left);
+		page_left_size = page_fill_last;
+		need_redraw = 1;
+	}
+}
+void pos_right_up(void) {
+	if (pos_right) {
+		--pos_right;
+		--pos_right_long;
+		need_redraw = 1;
+		return;
+	}	
+	if (pos_right_long) {
+		if (pos_right_long > page_size)
+			pos_right_long -= page_size;
+		else
+			pos_right_long = page_size - 1;
+		pos_right = page_size - 1;
+		dirlist_right = dirlist_stepback(dirlist_right, page_size + page_right_size);
+		pageinfo_right = page_fill(pageinfo_right, page_size, dirlist_right);
+		page_right_size = page_fill_last;
+		need_redraw = 1;
+	}
+}
+void pos_left_down(void) {
+	if (pos_left < page_left_size - 1) {
+		++pos_left;
+		++pos_left_long;
+		need_redraw = 1;
+		return;
+	}
+	if (page_left_size == page_size && (dirlist_left->curr->count > page_size || dirlist_left->curr->next)) {
+		pos_left = 0;
+		++pos_left_long;
+		pageinfo_left = page_fill(pageinfo_left, page_size, dirlist_left);
+		page_left_size = page_fill_last;
+		need_redraw = 1;
+	}
+}
+void pos_right_down(void) {
+	if (pos_right < page_right_size - 1) {
+		++pos_right;
+		++pos_right_long;
+		need_redraw = 1;
+		return;
+	}
+	if (page_right_size == page_size && (dirlist_right->curr->count > page_size || dirlist_right->curr->next)) {
+		pos_right = 0;
+		++pos_right_long;
+		pageinfo_right = page_fill(pageinfo_right, page_size, dirlist_right);
+		page_right_size = page_fill_last;
+		need_redraw = 1;
+	}	
+}
+
 void window_main(void) {
 	window_side = 0;
 	initscr();
@@ -677,60 +652,80 @@ void window_main(void) {
 	noecho();
 	colors_pairs_init();
 	window_init();
-	char max_curr, max_prev;
-	while(1) {
-		length_calc();
-		if (LINES - 8 != page_size) {
-		}
-		window_redraw();
+	char noexit = 1;
+	length_calc();
+	window_redraw();
+	while (noexit) {
 		switch (getch()) {
 		case 's':
-			if (window_side) {
-				++pos_right;
-				if (pos_right % (LINES - 9) == 0) {
-					list_next();
-				}
-			} else {
-				++pos_left;
-				if (pos_left % (LINES - 9) == 0) {
-					list_next();
-				}
-			}
+			if (window_side)
+				pos_right_down();
+			else
+				pos_left_down();
 			break;
 		case 'w':
-			if (window_side) {
-				if (pos_right)
-					--pos_right;
-			} else if (pos_left)
-					--pos_left;
+			if (window_side)
+				pos_right_up();
+			else
+				pos_left_up();
 			break;
 		case '\t':
 			(window_side) ? (window_side = 0) : (window_side = 1);
+			need_redraw = 1;
 			break;
-		case '\n':
-		case '\r':
+		case 'd':
 			dirent_in();
-			list_open();
+			need_redraw = 1;
 			break;
+		case 'x':
+			noexit = 0;
 		default:
 			break;
 		}
+		window_redraw();
 	}
 	endwin();
-	window_side = 0;
-	list_free();
-	free(list_left);
-	window_side = 1;
-	list_free();
-	free(list_right);
+	page_free(pageinfo_left);
+	page_free(pageinfo_right);
+	dirlist_free(dirlist_left);
+	dirlist_free(dirlist_right);
+}
+void window_resize_cols(void) {
+	if (COLS != cols_old) {
+		cols_old = COLS;
+		length_calc();
+		need_redraw = 1;
+	}
+}
+void window_resize_lines(void) {
+	if (LINES != lines_old) {
+		lines_old = LINES;
+		dirlist_stepback(dirlist_left,  page_size);
+		dirlist_stepback(dirlist_right, page_size);
+		page_free(pageinfo_left);
+		page_free(pageinfo_right);
+		page_size = LINES - 9;
+		pageinfo_left  = page_make(page_size);
+		pageinfo_right = page_make(page_size);
+		page_fill(pageinfo_left, page_size,  dirlist_left);
+		page_left_size = page_fill_last;
+		page_fill(pageinfo_right, page_size, dirlist_right);
+		page_right_size = page_fill_last;
+		need_redraw = 1;
+	}
 }
 void window_redraw(void) {
-	draw_line_top();
-	draw_line_path();
-	draw_line_cols();
-	draw_main();
-	draw_dirent();
-	draw_console();
-	draw_line_bottom();
+	window_resize_cols();
+	window_resize_lines();
+	if (need_redraw) {
+		draw_line_top();
+		draw_line_path();
+		draw_line_cols();
+		draw_main();
+		draw_line_bottom();
+		draw_dirent();
+		draw_console();
+		need_redraw = 0;
+	}
 	refresh();
 }
