@@ -1,4 +1,5 @@
 all: clean build clean run-log
+	rm *.o
 build: main.o
 	gcc -o build/test.exe main.o -lpthread
 main.o:
