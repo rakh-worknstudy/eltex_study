@@ -30,7 +30,8 @@ int main(int argc, char *argv[]) {
 	printf("Initializing address: ");
 	memset(&sv_address, 0, sizeof(sv_address));
 	sv_address.sin_family = AF_INET;
-	sv_address.sin_addr.s_addr = inet_addr("10.0.2.255");
+	//	sv_address.sin_addr.s_addr = inet_addr("10.0.2.255");
+	sv_address.sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	sv_address.sin_port = htons(SV_PORT);
 	printf("SUCCESS\n");
 //	----------------------------------------------------------------
