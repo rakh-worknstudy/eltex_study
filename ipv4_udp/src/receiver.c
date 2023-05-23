@@ -17,12 +17,11 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 	printf("SUCCESS\n");
-	
-	int optval = 1;
-	if (setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(optval)) < 0) {
-		perror("setsockopt");
-		return -1;
-	}
+	// int optval = 1;
+	// if (setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(optval)) < 0) {
+	// 	perror("setsockopt");
+	// 	return -1;
+	// }
 //	----------------------------------------------------------------
 	struct sockaddr_in sv_address;
 	printf("sockaddr_in: ");

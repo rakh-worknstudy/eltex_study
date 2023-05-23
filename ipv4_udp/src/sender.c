@@ -13,15 +13,15 @@ unsigned short csum(char *header, int size);
 int main(void) {
 //	----------------------------------------------------------------
 	int socket_fd;
-	if ((socket_fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP)) < 0) {
+	if ((socket_fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
 		perror("socket");
 		return -1;
 	}
-	int optval = 1;
-	if (setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(optval)) < 0) {
-		perror("setsockopt");
-		return -1;
-	}	
+	// int optval = 1;
+	// if (setsockopt(socket_fd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(optval)) < 0) {
+	// 	perror("setsockopt");
+	// 	return -1;
+	// }	
 //	----------------------------------------------------------------
 	struct sockaddr_in addr;
 	printf("sockaddr_in: ");
