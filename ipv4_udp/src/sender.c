@@ -75,6 +75,7 @@ int main(void) {
 #	endif  /* __FAVOR_BSD */
 	srand(time(NULL));
 	while (1) {
+		ip_header->check = 0;
 		ip_header->id = htons(rand());
 		ip_header->check = htons(csum(buffer, iphdr_length));
 		printf("sv_send: %s\n", buffer + iphdr_length + udphdr_length);
