@@ -1,0 +1,34 @@
+OpenSSH has been configured with the following options:
+                     User binaries: /home/kfcenjoyer/CCompile/openssh/build/bin
+                   System binaries: /home/kfcenjoyer/CCompile/openssh/build/sbin
+               Configuration files: /home/kfcenjoyer/CCompile/openssh/build/etc
+                   Askpass program: /home/kfcenjoyer/CCompile/openssh/build/libexec/ssh-askpass
+                      Manual pages: /home/kfcenjoyer/CCompile/openssh/build/share/man/manX
+                          PID file: /var/run
+  Privilege separation chroot path: /var/empty
+            sshd default user PATH: /usr/bin:/bin:/usr/sbin:/sbin:/home/kfcenjoyer/CCompile/openssh/build/bin
+                    Manpage format: doc
+                       PAM support: no
+                   OSF SIA support: no
+                 KerberosV support: no
+                   SELinux support: no
+                   libedit support: no
+                   libldns support: no
+  Solaris process contract support: no
+           Solaris project support: no
+         Solaris privilege support: no
+       IP address in $DISPLAY hack: no
+           Translate v4 in v6 hack: yes
+                  BSD Auth support: no
+              Random number source: OpenSSL internal ONLY
+             Privsep sandbox style: seccomp_filter
+                   PKCS#11 support: yes
+                  U2F/FIDO support: yes
+
+              Host: arm-unknown-linux-gnueabihf
+          Compiler: arm-linux-gnueabihf-gcc
+    Compiler flags: -g -O2 -pipe -Wno-error=format-truncation -Wall -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fno-builtin-memset -fstack-protector-strong -fPIE  
+Preprocessor flags: -I/home/kfcenjoyer/CCompile/openssl/build/include -I/usr/local/include -I/home/kfcenjoyer/CCompile/zlib/build/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE
+      Linker flags: -L/home/kfcenjoyer/CCompile/openssl/build/lib -L/usr/local/lib -L/home/kfcenjoyer/CCompile/zlib/build/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie 
+         Libraries: -ldl -lutil  -lresolv
+     +for channels: -lcrypto 
